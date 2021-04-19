@@ -4,6 +4,8 @@ var express = require("express");
 var mongoose = require("mongoose");
 // 2-1 : body-parser module를 bodyPaser 변수에 담는다.
 var bodyParser = require("body-parser");
+// 3-1 :  method-override module을 methodOverride변수에 담는다.
+var methodOverride = require("method-override");
 var app = express();
 
 // === DB setting ===
@@ -39,6 +41,9 @@ app.use(express.static(__dirname + "/public"));
 //  2번을 설정하면, route의 callback함수(function(req, res, next){...})의 req.body에서 form으로 입력받은 데이터를 사용할 수 있습니다. 이 부분이 지금 이해가 안가시면 이렇게 처리를 해 줘야 웹브라우저의 form에 입력한 데이터가 bodyParser를 통해 req.body으로 생성이 된다는 것만 아셔도 괜찮습니다.
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
+
+// 3-2 : _method의 query로 들어오는 값으로 HTTP method를 바꾼다. 예를 들어 _method=delete를 받으면 delete를 읽어 해당 request의 HTTP method를 delete로 바꾼다.
+app.use(methodOverride("_method"));
 
 // === DB scheman ===
 // 2-4 : 함수로 DB에서 사용할 스키마를 설정. 데이터베이스에 정보를 어떠한 형식으로 저장할 지를 지정해주는 것 - required : 반드시 입력되어야 한다 / unique : 값이 중복되면 안된다
@@ -79,6 +84,47 @@ app.get("/contacts/new", function (req, res) {
 // -> 모델.create 는 DB에 data를 생성하는 함수이다. 첫번째 파라미터로 data의 object를 받고, 두번째 파라미터로 콜백함수를 받음 -> 두번째 파라미터인 콜백함수는 첫번째 파라미터로 error를 받고, 두번째 파라미터로 생성된 data를 받는다. 생성된 데이터는 하나이므로 단수형이다 에러 없이 contact data가 생성되면 /contacts로 redirect한다.
 app.post("/contacts", function (req, res) {
     Contact.create(req.body, function (err, contact) {
+        if (err) return res.json(err);
+        res.redirect("/contacts");
+    });
+});
+
+// Contacts - show 3-3 : "contacts/:id"에 get 요청이 오는 경우
+// :id처럼 route에 골론을 사용하면 해당 위치의 값을 받아 req.params에 넣게 된다. 예) "contacts/abcd1234" => req.params.id에 abcd1234가 입력됨
+// Model.findOne 함수는 해당 모델의 document(문서)를 하나 찾는 함수이다. 첫번째 파라미터로 찾을 조건을 object로 입력하고 data를 찾은 후 콜백함수를 호출한다. model.findOne은 조건에 맞는 결과를 하나만 찾아 오브젝트로 전달한다. ==> 여기서는 _id가 req.params.id와 일치하는 data를 찾는 조건이다.
+// 에러가 없다면 검색 결과를 받아 views/contacts/show.ejs를 render
+app.get("/contacts/:id", function (req, res) {
+    Contact.findOne({ _id: req.params.id }, function (err, contact) {
+        if (err) return res.json(err);
+        res.render("contacts/show", { contact: contact });
+    });
+});
+
+// Contacts - edit 3-4 : "contacts/:id/edit"에 get 요청이 오는 경우
+// 검색 결과를 받아 views/contacts/edit.ejs를 render합니다.
+app.get("/contacts/:id/edit", function (req, res) {
+    Contact.findOne({ _id: req.params.id }, function (err, contact) {
+        if (err) return res.json(err);
+        res.render("contacts/edit", { contact: contact });
+    });
+});
+
+// Contacts - updata 3-5 : "contacts/:id"에 put 요청이 오는 경우
+// Model.findOneAndUpdate는 DB에서 해당 model의 document를 하나 찾아 그 data를 수정하는 함수이다.
+// 첫번째 파라미터로 찾을 조건을 object로 입력하고, 두번째 파라미터로 update할 정보를 object로 입력 data를 찾은 후 콜백함수를 호출한다. 이때 호출함수로 넘겨지는 값은 수정되기 전 값이다.
+// Data 수정 후 "/contacts/"+req.params.id로 redirect한다.
+app.put("/contacts/:id", function (req, res) {
+    Contact.findOneAndUpdate({ _id: req.params.id }, req.body, function (err, contact) {
+        if (err) return res.json(err);
+        res.redirect("/contacts/" + req.params.id);
+    });
+});
+
+// Contacts - destroy 3-6 : "contacts/:id"에 delete 요청이 오는 경우
+// Model.deleteOne은 DB에서 해당 model의 document를 하나 찾아 삭제하는 함수. 첫번째 parameter로 찾을 조건을 object로 입력하고 data를 찾은 후 callback함수를 호출합니다.
+// Data 삭제후 "/contacts"로 redirect합니다.
+app.delete("/contacts/:id", function (req, res) {
+    Contact.deleteOne({ _id: req.params.id }, function (err) {
         if (err) return res.json(err);
         res.redirect("/contacts");
     });
