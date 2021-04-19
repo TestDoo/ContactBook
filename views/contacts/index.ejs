@@ -12,13 +12,13 @@
         <%- include('../partials/nav') %>
 
         <!-- forEach를 사용해 코드를 반복해서 표시함 -->
-        <div class="contact contact-index">
+        <div class="container contact contact-index">
             <h2>Index</h2>
-            <ul>
+            <ul class="list-group">
                 <% contacts.forEach(function(contact) { %>
                 <!-- 3 -->
                 <!-- a태그 추가 : show action과 연결 -->
-                <li><a href="/contacts/<%= contact._id %>"><%= contact.name %></a></li>
+                <li class="list-group-item"><a href="/contacts/<%= contact._id %>"><%= contact.name %></a></li>
                 <% }) %>
             </ul>
         </div>
